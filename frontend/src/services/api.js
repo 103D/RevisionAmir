@@ -1,6 +1,20 @@
 import axios from 'axios';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1';
+// Determine the API base URL
+// On Vercel (production), use relative path since frontend and backend share the same domain
+// In development, use the VITE_API_URL env var or localhost fallback
+const isProduction = import.meta.env.PROD;
+const envApiUrl = import.meta.env.VITE_API_URL;
+
+let API_BASE_URL;
+if (isProduction) {
+  // In production on Vercel, use relative path
+  API_BASE_URL = '/api/v1';
+} else if (envApiUrl) {
+  API_BASE_URL = envApiUrl;
+} else {
+  API_BASE_URL = 'http://localhost:8000/api/v1';
+}
 
 const api = axios.create({
   baseURL: API_BASE_URL,
