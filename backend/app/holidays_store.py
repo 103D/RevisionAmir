@@ -1,26 +1,34 @@
 from __future__ import annotations
 
 import json
-from pathlib import Path
-from typing import Any
+import os
 from datetime import date
-
-
-BASE_DIR = Path(__file__).resolve().parent.parent
-DEFAULT_HOLIDAYS_PATH = BASE_DIR / "data" / "holidays.json"
+from typing import Any
 
 
 class HolidaysStore:
-    def __init__(self, holidays_path: str | None = None) -> None:
-        if holidays_path:
-            self.holidays_path = Path(holidays_path)
-        else:
-            self.holidays_path = DEFAULT_HOLIDAYS_PATH
+    def __init__(self) -> None:
+        # Проверяем, выполняемся ли мы в среде Vercel
+        self.is_vercel = bool(os.environ.get('VERCEL_ENV'))
 
-        self.holidays_path.parent.mkdir(parents=True, exist_ok=True)
-        self._ensure_exists()
+        if self.is_vercel:
+            # В среде Vercel используем переменные окружения для хранения данных
+            self.store_key = "HOLIDAYS_DATA"
+            # Инициализируем пустым списком, если нет данных
+            if not os.environ.get(self.store_key):
+                os.environ[self.store_key] = json.dumps({"holidays": []}, ensure_ascii=False)
+        else:
+            # В локальной среде используем файловое хранилище
+            from pathlib import Path
+            BASE_DIR = Path(__file__).resolve().parent.parent
+            self.holidays_path = BASE_DIR / "data" / "holidays.json"
+            self.holidays_path.parent.mkdir(parents=True, exist_ok=True)
+            self._ensure_exists()
 
     def _ensure_exists(self) -> None:
+        if self.is_vercel:
+            return  # На Vercel данные хранятся в env, инициализация выше
+
         if not self.holidays_path.exists():
             self.write({"holidays": []})
             return
@@ -36,12 +44,24 @@ class HolidaysStore:
             self.write(current)
 
     def read(self) -> dict[str, Any]:
-        with self.holidays_path.open("r", encoding="utf-8") as file:
-            return json.load(file)
+        if self.is_vercel:
+            data_str = os.environ.get(self.store_key, "")
+            if data_str:
+                try:
+                    return json.loads(data_str)
+                except json.JSONDecodeError:
+                    pass
+            return {"holidays": []}
+        else:
+            with self.holidays_path.open("r", encoding="utf-8") as file:
+                return json.load(file)
 
     def write(self, data: dict[str, Any]) -> None:
-        with self.holidays_path.open("w", encoding="utf-8") as file:
-            json.dump(data, file, ensure_ascii=False, indent=2)
+        if self.is_vercel:
+            os.environ[self.store_key] = json.dumps(data, ensure_ascii=False)
+        else:
+            with self.holidays_path.open("w", encoding="utf-8") as file:
+                json.dump(data, file, ensure_ascii=False, indent=2)
 
     def get_all_holidays(self) -> list[dict[str, Any]]:
         data = self.read()
