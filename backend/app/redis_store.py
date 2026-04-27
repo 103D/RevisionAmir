@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import os
+import time
 from typing import Any
 
 try:
@@ -22,14 +23,62 @@ class RedisStore:
         self.redis_client: Any | None = None
         self._fallback_store: Any | None = None
 
-        redis_url = os.environ.get('REDIS_URL') or os.environ.get('UPSTASH_REDIS_REST_URL')
-        if redis_url and REDIS_AVAILABLE:
+        redis_url = os.environ.get('REDIS_URL')
+        if not redis_url:
+            # Fallback: no Redis configured
+            return
+
+        if REDIS_AVAILABLE:
             try:
-                self.redis_client = redis.from_url(redis_url, decode_responses=True)
-                self.redis_client.ping()
+                # Upstash uses rediss:// (SSL). For SSL connections, disable cert verification
+                # because Upstash uses self-signed certificates.
+                connect_kwargs = {"decode_responses": True}
+                if redis_url.startswith('rediss://'):
+                    connect_kwargs["ssl_cert_reqs"] = None
+
+                # Retry logic
+                for attempt in range(3):
+                    try:
+                        self.redis_client = redis.from_url(redis_url, **connect_kwargs)
+                        self.redis_client.ping()
+                        print(f"✓ Connected to Redis: {redis_url[:40]}...")
+                        self._migrate_if_needed()
+                        break
+                    except Exception as e:
+                        if attempt < 2:
+                            print(f"Retrying Redis connection ({attempt + 1}/3): {e}")
+                            time.sleep(1)
+                        else:
+                            raise e
             except Exception as e:
                 print(f"Warning: Redis connection failed: {e}")
                 self.redis_client = None
+        else:
+            print("Warning: redis-py not installed, install with: pip install redis")
+
+    def _migrate_if_needed(self) -> None:
+        """Если в Redis нет данных, но есть локальный файл — загружаем"""
+        if not self.redis_client:
+            return
+        try:
+            existing = self.redis_client.get("store:data")
+            if existing:
+                return  # уже есть данные
+        except Exception:
+            return
+
+        # Пытаемся прочитать локальный файл
+        try:
+            from pathlib import Path
+            BASE_DIR = Path(__file__).resolve().parent.parent
+            local_file = BASE_DIR / "data" / "store.json"
+            if local_file.exists():
+                with local_file.open("r", encoding="utf-8") as f:
+                    data = json.load(f)
+                self.redis_client.set("store:data", json.dumps(data, ensure_ascii=False))
+                print(f"✓ Migrated store.json to Redis ({len(data.get('filials', []))} filials)")
+        except Exception as e:
+            print(f"Warning: Could not migrate store.json: {e}")
 
     def _get_fallback(self):
         if self._fallback_store is None:

@@ -79,8 +79,11 @@ Thumbs.db
 # ============================================================
 backend/data/*.json
 !backend/data/store.json.example
+!backend/data/holidays.json.example
 frontend/public/
 .venv/
+backend/.env
+frontend/.env
 
 # ============================================================
 # Logs

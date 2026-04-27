@@ -1,0 +1,18 @@
+{
+  "filials": [
+    {
+      "id": "example-id-1",
+      "name": "Филиал 1",
+      "first_revision_date": "2024-01-15",
+      "previous_revision_date": null,
+      "next_revision_date": null,
+      "shortage": 0,
+      "revision_dates": [],
+      "revision_statuses": {},
+      "revision_shortages": {},
+      "next_revision_status": "planned",
+      "created_at": "2024-01-15T10:00:00+00:00",
+      "updated_at": "2024-01-15T10:00:00+00:00"
+    }
+  ]
+}
