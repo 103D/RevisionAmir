@@ -57,17 +57,21 @@ class RedisStore:
             print("Warning: redis-py not installed, install with: pip install redis")
 
     def _migrate_if_needed(self) -> None:
-        """Если в Redis нет данных, но есть локальный файл — загружаем"""
+        """Если в Redis нет данных или ключ неверного типа, загружаем из локальных файлов"""
         if not self.redis_client:
             return
         try:
-            existing = self.redis_client.get("store:data")
-            if existing:
-                return  # уже есть данные
-        except Exception:
-            return
+            key_type = self.redis_client.type("store:data")
+            if key_type == "string":
+                # Ключ уже существует и это строка — ничего не делаем
+                return
+            elif key_type != "none":
+                # Ключ существует, но не строка — удаляем
+                print(f"Warning: store:data has wrong type '{key_type}', replacing")
+                self.redis_client.delete("store:data")
+        except Exception as e:
+            print(f"Warning: Could not check store:data type: {e}")
 
-        # Пытаемся прочитать локальный файл
         try:
             from pathlib import Path
             BASE_DIR = Path(__file__).resolve().parent.parent

@@ -24,6 +24,16 @@ function FilialsPage() {
     queryFn: () => filialsApi.getAll(),
   });
 
+  const exportFilialsMutation = useMutation({
+    mutationFn: () => exportApi.downloadFilials(),
+    onError: (error) => toast.error(error.message),
+  });
+
+  const exportHolidaysMutation = useMutation({
+    mutationFn: () => exportApi.downloadHolidays(),
+    onError: (error) => toast.error(error.message),
+  });
+
   const createMutation = useMutation({
     mutationFn: (payload) => filialsApi.create(payload),
     onSuccess: () => {
@@ -137,19 +147,42 @@ function FilialsPage() {
     }
   };
 
-  // ============================================================
-  // Render
-  // ============================================================
-  return (
-    <section className="page">
-      {/* Create Filial Form */}
-      <CreateFilialForm
-        onSubmit={(payload) => createMutation.mutate(payload)}
-        isPending={createMutation.isPending}
-      />
+   // ============================================================
+   // Render
+   // ============================================================
+   return (
+     <section className="page">
+       {/* Create Filial Form */}
+       <CreateFilialForm
+         onSubmit={(payload) => createMutation.mutate(payload)}
+         isPending={createMutation.isPending}
+       />
 
-      {/* Filials List */}
-      <section className="panel">
+        {/* Export Controls */}
+        <div className="exportControls">
+          <h2 className="exportTitle">Экспорт данных</h2>
+          <div className="exportButtons">
+            <button
+              type="button"
+              className="exportButton"
+              onClick={() => exportFilialsMutation.mutate()}
+              disabled={exportFilialsMutation.isPending}
+            >
+              <DownloadIcon /> Экспорт филиалов (Excel)
+            </button>
+            <button
+              type="button"
+              className="exportButton"
+              onClick={() => exportHolidaysMutation.mutate()}
+              disabled={exportHolidaysMutation.isPending}
+            >
+              <DownloadIcon /> Экспорт праздников (Excel)
+            </button>
+          </div>
+        </div>
+
+       {/* Filials List */}
+       <section className="panel">
         {filialsQuery.isLoading && <p className="systemState">Загрузка списка...</p>}
 
         {filialsQuery.isError && <p className="systemStateError">Не удалось загрузить данные.</p>}

@@ -353,7 +353,214 @@ header .cardHead{
     grid-template-columns: 1fr;
   }
 
-  .formGrid .primaryButton {
-    grid-column: auto;
-  }
+   .formGrid .primaryButton {
+     grid-column: auto;
+   }
+ }
+
+/* ============================================================
+   Export Controls
+   ============================================================ */
+.exportControls {
+  background: linear-gradient(135deg, #f0f9f7 0%, #e6f7f2 100%);
+  border: 1px solid #c5e0d8;
+  border-radius: 14px;
+  padding: 14px 18px;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
 }
+
+.exportTitle {
+  margin: 0;
+  font-size: 0.95rem;
+  color: #0a665f;
+  font-weight: 700;
+}
+
+.exportButtons {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.exportButton {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: linear-gradient(180deg, #0f7b72, #0a665f);
+  color: #fff;
+  border: none;
+  border-radius: 10px;
+  padding: 8px 14px;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform 120ms ease, filter 120ms ease;
+}
+
+.exportButton:hover {
+  filter: brightness(0.95);
+  transform: translateY(-1px);
+}
+
+.exportButton:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* ============================================================
+   Revision Dates Slider
+   ============================================================ */
+.revisionSlider {
+  border: 1px solid #d7e3e8;
+  border-radius: 12px;
+  background: var(--surface-soft);
+  padding: 10px 11px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.revisionSliderFeatured {
+  padding: 14px 16px;
+}
+
+.sliderHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.sliderLabel {
+  font-size: 0.76rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #607480;
+  font-weight: 800;
+}
+
+.sliderCounter {
+  font-size: 0.75rem;
+  color: #5d717c;
+  background: #e8f0f3;
+  padding: 2px 8px;
+  border-radius: 8px;
+}
+
+.sliderDisplay {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 8px 0;
+  position: relative;
+}
+
+.sliderDateContainer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  flex: 1;
+}
+
+.sliderDateLabel {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: #889298;
+  font-weight: 700;
+}
+
+.sliderDate {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--text);
+  text-align: center;
+}
+
+.revisionSliderFeatured .sliderDate {
+  font-size: 1.6rem;
+}
+
+.sliderDate.past {
+  color: #889298;
+}
+
+.sliderDate.today {
+  color: #0f7b72;
+}
+
+.sliderDate.future {
+  color: #0a665f;
+}
+
+.todayBadge {
+  font-size: 0.65rem;
+  background: #0f7b72;
+  color: #fff;
+  padding: 2px 8px;
+  border-radius: 6px;
+  font-weight: 700;
+}
+
+.sliderArrow {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: 1px solid #c5dbd7;
+  border-radius: 50%;
+  background: #fff;
+  color: #243944;
+  cursor: pointer;
+  transition: all 120ms ease;
+  flex-shrink: 0;
+}
+
+.sliderArrow:hover:not(:disabled) {
+  background: #e6f7f2;
+  border-color: #0f7b72;
+  color: #0a665f;
+}
+
+.sliderArrow:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.revisionSliderFeatured .sliderArrow {
+  width: 44px;
+  height: 44px;
+}
+
+.sliderDots {
+  display: flex;
+  justify-content: center;
+  gap: 6px;
+}
+
+.sliderDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  border: none;
+  background: #d0dce2;
+  cursor: pointer;
+  transition: background 120ms ease;
+  padding: 0;
+}
+
+.sliderDot.active {
+  background: #0f7b72;
+}
+
+.sliderDot:hover:not(.active) {
+  background: #a8c9c7;
+}
+

@@ -51,15 +51,18 @@ class RedisHolidaysStore:
             print("Warning: redis-py not installed")
 
     def _migrate_if_needed(self) -> None:
-        """Если в Redis нет данных, но есть локальный файл — загружаем"""
+        """Если в Redis нет данных или ключ неверного типа, загружаем из локальных файлов"""
         if not self.redis_client:
             return
         try:
-            existing = self.redis_client.get("holidays:data")
-            if existing:
-                return  # уже есть данные
-        except Exception:
-            return
+            key_type = self.redis_client.type("holidays:data")
+            if key_type == "string":
+                return
+            elif key_type != "none":
+                print(f"Warning: holidays:data has wrong type '{key_type}', replacing")
+                self.redis_client.delete("holidays:data")
+        except Exception as e:
+            print(f"Warning: Could not check holidays:data type: {e}")
 
         try:
             from pathlib import Path

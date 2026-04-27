@@ -19,6 +19,7 @@ except ImportError:
 
 app = FastAPI(title="Revision Backend", version="1.0.0")
 app.include_router(holidays_router, prefix="/api/v1", tags=["holidays"])
+app.include_router(export_router, prefix="/api/v1", tags=["export"])
 
 app.add_middleware(
     CORSMiddleware,

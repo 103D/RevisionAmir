@@ -137,41 +137,6 @@ function ShortageEditor({
 }
 
 /**
- * Revision Dates Dropdown Component
- * Shows previous, first, and following revision dates
- */
-function RevisionDatesDropdown({ filial, isFeatured }) {
-  return (
-    <details className={isFeatured ? 'followingBlock followingBlockFeatured' : 'followingBlock'}>
-      <summary>Даты ревизий</summary>
-      <div className={isFeatured ? 'followingList followingListFeatured' : 'followingList'}>
-        <div className={isFeatured ? 'followingRow followingRowFeatured' : 'followingRow'}>
-          <span>Прошлая:</span>
-          <span>{formatDate(filial.previous_revision_date)}</span>
-        </div>
-        <div className={isFeatured ? 'followingRow followingRowFeatured' : 'followingRow'}>
-          <span>Первая:</span>
-          <span>{formatDate(filial.first_revision_date)}</span>
-        </div>
-        {filial.revision_dates && filial.revision_dates.length > 0 && (
-          <div className={isFeatured ? 'followingRow followingRowFeatured' : 'followingRow'}>
-            <span>Последующие:</span>
-            <span>
-              {filial.revision_dates.map((d, i) => (
-                <span key={d}>
-                  {i > 0 ? ', ' : ''}
-                  {formatDate(d)}
-                </span>
-              ))}
-            </span>
-          </div>
-        )}
-      </div>
-    </details>
-  );
-}
-
-/**
  * Filial Card Component
  * Individual branch card with edit functionality
  */
@@ -190,6 +155,9 @@ function FilialCard({
   isUpdatingShortage,
   isDeleting,
 }) {
+  // Determine status color for the featured indicator
+  const statusClass = getStatusClass(filial);
+  const statusColor = getStatusColor(statusClass);
   return (
     <article
       key={filial.id}

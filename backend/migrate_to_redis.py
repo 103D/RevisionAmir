@@ -17,9 +17,9 @@ except ImportError:
 
 
 def get_redis_client():
-    redis_url = os.environ.get('REDIS_URL') or os.environ.get('UPSTASH_REDIS_REST_URL')
+    redis_url = os.environ.get('REDIS_URL')
     if not redis_url:
-        print("Error: REDIS_URL or UPSTASH_REDIS_REST_URL not set")
+        print("Error: REDIS_URL not set")
         exit(1)
     try:
         client = redis.from_url(redis_url, decode_responses=True)
@@ -59,6 +59,15 @@ def migrate_holidays(redis_client):
         with holidays_file.open("r", encoding="utf-8") as f:
             data = json.load(f)
         print(f"✓ Loaded holidays.json ({len(data.get('holidays', []))} holidays)")
+
+    # Check if key exists and has wrong type
+    try:
+        key_type = redis_client.type("holidays:data")
+        if key_type != "none" and key_type != "string":
+            print(f"Warning: holidays:data exists with type '{key_type}', deleting...")
+            redis_client.delete("holidays:data")
+    except Exception as e:
+        print(f"Warning: Could not check key type: {e}")
 
     redis_client.set("holidays:data", json.dumps(data, ensure_ascii=False))
     print("✓ holidays:data migrated to Redis")

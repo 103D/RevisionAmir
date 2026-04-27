@@ -33,4 +33,38 @@ export const filialsApi = {
   delete: (id) => api.delete(`/filials/${id}`),
 };
 
+// Export API using rawApi for binary downloads
+export const exportApi = {
+  downloadFilials: async () => {
+    try {
+      const response = await rawApi.get('/export/filials');
+      const url = window.URL.createObjectURL(new Blob([response.data], { type: response.headers['content-type'] || 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }));
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = 'filials.xlsx';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      throw new Error(error.message || 'Не удалось скачать филиалы');
+    }
+  },
+  downloadHolidays: async () => {
+    try {
+      const response = await rawApi.get('/export/holidays');
+      const url = window.URL.createObjectURL(new Blob([response.data], { type: response.headers['content-type'] || 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }));
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = 'holidays.xlsx';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      throw new Error(error.message || 'Не удалось скачать праздники');
+    }
+  },
+};
+
 export default api;
