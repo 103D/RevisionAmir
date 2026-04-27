@@ -9,12 +9,13 @@ from typing import Any
 class HolidaysStore:
     def __init__(self) -> None:
         # Проверяем, выполняемся ли мы в среде Vercel
-        self.is_vercel = bool(os.environ.get('VERCEL_ENV'))
+        # Vercel устанавливает VER = '1' и/или VERCEL_ENV
+        self.is_vercel = bool(os.environ.get('VERCEL') or os.environ.get('VERCEL_ENV'))
 
         if self.is_vercel:
             # В среде Vercel используем переменные окружения для хранения данных
             self.store_key = "HOLIDAYS_DATA"
-            # Инициализируем пустым списком, если нет данных
+            # Инициализируем пустыми данными, если переменная не установлена
             if not os.environ.get(self.store_key):
                 os.environ[self.store_key] = json.dumps({"holidays": []}, ensure_ascii=False)
         else:

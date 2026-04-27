@@ -1,13 +1,13 @@
 from fastapi import APIRouter, HTTPException
 
 try:
-    from .holidays_store import HolidaysStore
+    from .redis_holidays_store import RedisHolidaysStore
 except ImportError:
-    from holidays_store import HolidaysStore
+    from redis_holidays_store import RedisHolidaysStore
 
 router = APIRouter()
 
-holidays_store = HolidaysStore()
+holidays_store = RedisHolidaysStore()
 
 
 @router.get("/holidays")

@@ -13,11 +13,15 @@ DEFAULT_STORE_PATH = BASE_DIR / "data" / "store.json"
 class JsonStore:
     def __init__(self, store_path: str | None = None) -> None:
         # Проверяем, выполняемся ли мы в среде Vercel
-        self.is_vercel = bool(os.environ.get('VERCEL_ENV'))
+        # Vercel устанавливает VER = '1' и/или VERCEL_ENV
+        self.is_vercel = bool(os.environ.get('VERCEL') or os.environ.get('VERCEL_ENV'))
 
         if self.is_vercel:
             # В среде Vercel используем переменные окружения для хранения данных
             self.store_key = "STORE_DATA"
+            # Инициализируем пустыми данными, если переменная не установлена
+            if not os.environ.get(self.store_key):
+                os.environ[self.store_key] = json.dumps({"filials": []}, ensure_ascii=False)
         else:
             # В локальной среде используем файловое хранилище
             configured_path = store_path or os.getenv("STORE_PATH")

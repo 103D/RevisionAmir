@@ -8,12 +8,12 @@ from fastapi import HTTPException
 
 try:
     from .schemas import FilialCreate, FilialUpdate, NextRevisionUpdate, RevisionDatesUpdate
-    from .store import JsonStore
-    from .holidays_store import HolidaysStore
+    from .redis_store import RedisStore
+    from .redis_holidays_store import RedisHolidaysStore
 except ImportError:
     from schemas import FilialCreate, FilialUpdate, NextRevisionUpdate, RevisionDatesUpdate
-    from store import JsonStore
-    from holidays_store import HolidaysStore
+    from redis_store import RedisStore
+    from redis_holidays_store import RedisHolidaysStore
 
 
 class RevisionService:
@@ -21,9 +21,9 @@ class RevisionService:
     GENERATION_HORIZON_MONTHS = 24
     ALLOWED_STATUSES = {"planned", "postponed"}
 
-    def __init__(self, store: JsonStore) -> None:
+    def __init__(self, store: RedisStore) -> None:
         self.store = store
-        self.holidays_store = HolidaysStore()
+        self.holidays_store = RedisHolidaysStore()
 
     @staticmethod
     def _to_date(value: str) -> date:

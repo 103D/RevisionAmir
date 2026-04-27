@@ -8,12 +8,12 @@ from fastapi.middleware.cors import CORSMiddleware
 try:
     from .schemas import FilialCreate, FilialOut, FilialUpdate, NextRevisionUpdate, RevisionDatesUpdate
     from .service import RevisionService
-    from .store import JsonStore
+    from .redis_store import RedisStore
     from .holidays import router as holidays_router
 except ImportError:
     from schemas import FilialCreate, FilialOut, FilialUpdate, NextRevisionUpdate, RevisionDatesUpdate
     from service import RevisionService
-    from store import JsonStore
+    from redis_store import RedisStore
     from holidays import router as holidays_router
 
 
@@ -28,7 +28,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-service = RevisionService(JsonStore())
+service = RevisionService(RedisStore())
 
 
 @app.get("/health")
