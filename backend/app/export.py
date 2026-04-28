@@ -135,7 +135,7 @@ def build_holidays_excel(holidays: list[dict[str, Any]]) -> bytes:
     return output.getvalue()
 
 
-@router.get("/api/v1/export/filials")
+@router.get("/export/filials")
 async def export_filials():
     """Export all filials to Excel"""
     filials = service.list_filials()
@@ -150,7 +150,7 @@ async def export_filials():
     )
 
 
-@router.get("/api/v1/export/holidays")
+@router.get("/export/holidays")
 async def export_holidays():
     """Export all holidays to Excel"""
     try:
