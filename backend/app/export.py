@@ -153,12 +153,8 @@ async def export_filials():
 @router.get("/export/holidays")
 async def export_holidays():
     """Export all holidays to Excel"""
-    try:
-        from .holidays_store import HolidaysStore
-    except ImportError:
-        from holidays_store import HolidaysStore
-
-    holidays = HolidaysStore().get_all_holidays()
+    # Use the same service instance (Redis-backed)
+    holidays = service.holidays_store.get_all_holidays()
     excel_bytes = build_holidays_excel(holidays)
 
     return StreamingResponse(
