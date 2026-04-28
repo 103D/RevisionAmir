@@ -10,11 +10,13 @@ try:
     from .service import RevisionService
     from .redis_store import RedisStore
     from .holidays import router as holidays_router
+    from .export import router as export_router
 except ImportError:
     from schemas import FilialCreate, FilialOut, FilialUpdate, NextRevisionUpdate, RevisionDatesUpdate
     from service import RevisionService
     from redis_store import RedisStore
     from holidays import router as holidays_router
+    from export import router as export_router
 
 
 app = FastAPI(title="Revision Backend", version="1.0.0")
