@@ -1,5 +1,6 @@
 import { DeleteIcon, EditIcon } from './Icons';
 import { formatDate, formatMoney, getStatusClass, getStatusColor } from './utils';
+import RevisionDatesSlider from './RevisionDatesSlider';
 
 /**
  * Next Revision Date Editor Component
@@ -220,7 +221,7 @@ function FilialCard({
             onCancel={onCancelEdit}
             onStateChange={onEditStateChange}
           />
-          <RevisionDatesDropdown filial={filial} isFeatured={isFeatured} />
+          <RevisionDatesSlider filial={filial} isFeatured={isFeatured} />
         </div>
       </div>
     </article>
