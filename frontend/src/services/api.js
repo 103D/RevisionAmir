@@ -1,12 +1,10 @@
 import axios from 'axios';
 
 // Determine the API base URL
-// In development: uses VITE_API_URL or localhost fallback
-// In production: uses VITE_API_URL (must be set in Vercel environment)
 const envApiUrl = import.meta.env.VITE_API_URL;
-
 const API_BASE_URL = envApiUrl || 'http://localhost:8000/api/v1';
 
+// Regular API client (JSON responses)
 const api = axios.create({
   baseURL: API_BASE_URL,
   headers: {
@@ -14,7 +12,7 @@ const api = axios.create({
   },
 });
 
-// Response interceptor for error handling
+// Response interceptor for JSON responses
 api.interceptors.response.use(
   (response) => response.data,
   (error) => {
@@ -22,6 +20,12 @@ api.interceptors.response.use(
     return Promise.reject(new Error(message));
   }
 );
+
+// Raw API client for file downloads (no response transformation)
+const rawApi = axios.create({
+  baseURL: API_BASE_URL,
+  responseType: 'blob',
+});
 
 // Filials API
 export const filialsApi = {
