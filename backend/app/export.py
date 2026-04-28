@@ -1,9 +1,11 @@
 from __future__ import annotations
 
 import io
+import logging
+from datetime import date
 from typing import Any
 
-from fastapi import APIRouter, Response
+from fastapi import APIRouter, Response, HTTPException
 from fastapi.responses import StreamingResponse
 from openpyxl import Workbook
 from openpyxl.styles import Font, Alignment, PatternFill, Border, Side
@@ -18,6 +20,15 @@ except ImportError:
 
 router = APIRouter()
 service = RevisionService(RedisStore())
+
+logger = logging.getLogger(__name__)
+
+
+def _to_iso_string(value: Any) -> str:
+    """Convert date/datetime to ISO string, else return string or empty"""
+    if isinstance(value, date):
+        return value.isoformat()
+    return str(value) if value else ""
 
 
 def style_header_cell(cell):
@@ -68,16 +79,17 @@ def build_filials_excel(filials: list[dict[str, Any]]) -> bytes:
 
     # Write data rows
     for row_idx, filial in enumerate(filials, start=2):
+        revision_dates_list = filial.get("revision_dates", [])
         revision_dates_str = ", ".join(
-            d for d in filial.get("revision_dates", []) if d
-        ) if isinstance(filial.get("revision_dates"), list) else ""
+            _to_iso_string(d) for d in revision_dates_list if d
+        ) if isinstance(revision_dates_list, list) else ""
 
         row_data = [
             filial.get("id", ""),
             filial.get("name", ""),
-            filial.get("first_revision_date", ""),
-            filial.get("previous_revision_date") or "",
-            filial.get("next_revision_date") or "",
+            _to_iso_string(filial.get("first_revision_date")),
+            _to_iso_string(filial.get("previous_revision_date")),
+            _to_iso_string(filial.get("next_revision_date")),
             filial.get("next_revision_status", "planned"),
             filial.get("shortage", 0),
             revision_dates_str,
@@ -138,29 +150,36 @@ def build_holidays_excel(holidays: list[dict[str, Any]]) -> bytes:
 @router.get("/export/filials")
 async def export_filials():
     """Export all filials to Excel"""
-    filials = service.list_filials()
-    excel_bytes = build_filials_excel(filials)
+    try:
+        filials = service.list_filials()
+        excel_bytes = build_filials_excel(filials)
 
-    return StreamingResponse(
-        io.BytesIO(excel_bytes),
-        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        headers={
-            "Content-Disposition": 'attachment; filename="filials.xlsx"'
-        }
-    )
+        return StreamingResponse(
+            io.BytesIO(excel_bytes),
+            media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            headers={
+                "Content-Disposition": 'attachment; filename="filials.xlsx"'
+            }
+        )
+    except Exception as e:
+        logger.error(f"Error exporting filials: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Failed to export filials: {str(e)}")
 
 
 @router.get("/export/holidays")
 async def export_holidays():
     """Export all holidays to Excel"""
-    # Use the same service instance (Redis-backed)
-    holidays = service.holidays_store.get_all_holidays()
-    excel_bytes = build_holidays_excel(holidays)
+    try:
+        holidays = service.holidays_store.get_all_holidays()
+        excel_bytes = build_holidays_excel(holidays)
 
-    return StreamingResponse(
-        io.BytesIO(excel_bytes),
-        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        headers={
-            "Content-Disposition": 'attachment; filename="holidays.xlsx"'
-        }
-    )
+        return StreamingResponse(
+            io.BytesIO(excel_bytes),
+            media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            headers={
+                "Content-Disposition": 'attachment; filename="holidays.xlsx"'
+            }
+        )
+    except Exception as e:
+        logger.error(f"Error exporting holidays: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Failed to export holidays: {str(e)}")

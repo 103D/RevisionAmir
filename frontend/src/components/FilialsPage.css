@@ -253,7 +253,8 @@ header .cardHead{
 .inlineEdit {
   display: flex;
   flex-direction: column;
-  height: fit-content;
+  justify-content: space-around;
+  height: 100%;
   gap: 8px;
 }
 
@@ -343,7 +344,8 @@ header .cardHead{
 
 .primaryButtonFeatured,
 .secondaryButtonFeatured {
-  padding: 8px 14px;
+  padding: 6px 10px;
+  font-size: 0.85rem;
 }
 
 @media (max-width: 1024px) {
@@ -431,6 +433,19 @@ header .cardHead{
   display: flex;
   flex-direction: column;
   gap: 10px;
+  min-height: 80px; /* ensure always visible */
+}
+
+.revisionSliderEmpty {
+  justify-content: center;
+  align-items: center;
+}
+
+.sliderEmptyState {
+  color: #889298;
+  font-size: 0.85rem;
+  text-align: center;
+  padding: 8px 0;
 }
 
 .revisionSliderFeatured {

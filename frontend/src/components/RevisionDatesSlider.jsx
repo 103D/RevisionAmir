@@ -12,8 +12,18 @@ function RevisionDatesSlider({ filial, isFeatured }) {
   const revisionDates = filial.revision_dates || [];
   const totalDates = revisionDates.length;
 
+  // If no dates, show placeholder
   if (totalDates === 0) {
-    return null;
+    return (
+      <div className={`revisionSlider revisionSliderEmpty ${isFeatured ? 'revisionSliderFeatured' : ''}`}>
+        <div className="sliderHeader">
+          <span className="sliderLabel">Даты ревизий</span>
+        </div>
+        <div className="sliderEmptyState">
+          <span>Нет запланированных ревизий</span>
+        </div>
+      </div>
+    );
   }
 
   const currentDate = revisionDates[currentIndex];
