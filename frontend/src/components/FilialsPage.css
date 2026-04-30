@@ -364,9 +364,9 @@ header .cardHead{
   }
 
    .formGrid .primaryButton {
-     grid-column: auto;
-   }
- }
+      grid-column: auto;
+    }
+}
 
 /* ============================================================
    Export Controls
@@ -423,6 +423,50 @@ header .cardHead{
 }
 
 /* ============================================================
+   Toolbar
+   ============================================================ */
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 4px;
+}
+
+.viewToggle {
+  display: flex;
+  gap: 6px;
+}
+
+.viewButton {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border: 1px solid #c5dbd7;
+  border-radius: 10px;
+  background: #fff;
+  color: #243944;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 120ms ease;
+}
+
+.viewButton:hover {
+  background: #e6f7f2;
+  border-color: #0f7b72;
+  color: #0a665f;
+}
+
+.viewButton.active {
+  background: #0f7b72;
+  border-color: #0f7b72;
+  color: #fff;
+}
+
+/* ============================================================
    Revision Dates Slider
    ============================================================ */
 .revisionSlider {
@@ -433,7 +477,7 @@ header .cardHead{
   display: flex;
   flex-direction: column;
   gap: 10px;
-  min-height: 80px; /* ensure always visible */
+  min-height: 80px;
 }
 
 .revisionSliderEmpty {
@@ -587,3 +631,182 @@ header .cardHead{
   background: #a8c9c7;
 }
 
+/* ============================================================
+   Table View
+   ============================================================ */
+.tableWrapper {
+  overflow-x: auto;
+  background: var(--surface);
+  border: 1px solid var(--stroke);
+  border-radius: 16px;
+  box-shadow: 0 12px 30px rgba(20, 46, 61, 0.08);
+  width: max-content;
+}
+
+.filialsTable {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+
+.filialsTable thead {
+  background: linear-gradient(180deg, #366092, #2a4d70);
+}
+
+.filialsTable th {
+  color: #fff;
+  font-weight: 700;
+  text-align: left;
+  padding: 12px 14px;
+  border-right: 1px solid rgba(255,255,255,0.1);
+}
+
+.filialsTable th:last-child {
+  border-right: none;
+}
+
+.filialsTable tbody tr {
+  border-bottom: 1px solid #e8f0f3;
+  transition: background 120ms ease;
+}
+
+.filialsTable tbody tr:hover {
+  background: #f6fafb;
+}
+
+.filialsTable tbody tr:last-child {
+  border-bottom: none;
+}
+
+.filialsTable td {
+  padding: 10px 14px;
+  vertical-align: middle;
+  border-right: 1px solid #e8f0f3;
+}
+
+.filialsTable td:last-child {
+  border-right: none;
+}
+
+.col-name {
+  font-weight: 600;
+  color: var(--text);
+}
+
+.col-amount {
+  font-weight: 700;
+  color: var(--brand);
+}
+
+.col-dates {
+  max-width: 300px;
+}
+
+/* Status badge */
+.statusBadge {
+  display: inline-block;
+  padding: 3px 8px;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.statusBadge.planned {
+  background: #e6f7f2;
+  color: #0a665f;
+}
+
+.statusBadge.postponed {
+  background: #fff4e5;
+  color: #c75b00;
+}
+
+/* Sortable table headers */
+.filialsTable th.sortable {
+  cursor: pointer;
+  user-select: none;
+  position: relative;
+  padding-right: 28px !important;
+}
+
+.filialsTable th.sortable:after {
+  content: "";
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 0;
+  height: 0;
+  border-left: 5px solid transparent;
+  border-right: 5px solid transparent;
+  border-bottom: 5px solid rgba(255,255,255,0.7);
+}
+
+.filialsTable th.sortable.asc:after {
+  border-top: 5px solid rgba(255,255,255,0.7);
+  border-bottom: none;
+  transform: translateY(-50%) rotate(180deg);
+}
+
+/* Table column modifiers */
+.filialsTable td.numeric {
+  text-align: right;
+  font-family: "JetBrains Mono", "Roboto Mono", monospace;
+}
+
+.filialsTable th.actions-col,
+.filialsTable td.actions-col {
+  width: 80px;
+  text-align: center;
+}
+
+/* Action buttons in table */
+.tableActions {
+  display: flex;
+  justify-content: center;
+  gap: 6px;
+}
+
+.actionButton {
+  padding: 4px 8px;
+  min-width: 32px;
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: filter 120ms ease;
+}
+
+.actionButton.delete {
+  background: #fff4f4;
+  color: #c94040;
+}
+
+.actionButton:hover {
+  filter: brightness(0.95);
+  transform: translateY(-1px);
+}
+
+.actionButton:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* Responsive */
+@media (max-width: 1024px) {
+  .toolbar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .viewToggle,
+  .exportButtons {
+    justify-content: center;
+  }
+}

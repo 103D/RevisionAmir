@@ -68,7 +68,7 @@ export function validateCreateForm(name, firstDate, shortage) {
 }
 
 /**
- * Sort filials by next revision date
+ * Sort filials by next revision date (default)
  */
 export function sortFilials(filials) {
   const today = new Date();
@@ -91,5 +91,44 @@ export function sortFilials(filials) {
     if (!aOverdue && bOverdue) return 1;
 
     return aDate.getTime() - bDate.getTime();
+  });
+}
+
+/**
+ * Generic sort function for table columns
+ * @param {Array} data - array of objects
+ * @param {string} key - property key to sort by
+ * @param {string} direction - 'asc' or 'desc'
+ * @returns {Array} sorted array
+ */
+export function sortBy(data, key, direction = 'asc') {
+  if (!Array.isArray(data)) return data;
+
+  return [...data].sort((a, b) => {
+    const aRaw = a[key];
+    const bRaw = b[key];
+
+    // Handle null/undefined
+    const aVal = aRaw == null ? '' : aRaw;
+    const bVal = bRaw == null ? '' : bRaw;
+
+    let comparison = 0;
+
+    // Date strings (ISO)
+    if (key.includes('date') || key.includes('Date')) {
+      const aDate = new Date(aVal);
+      const bDate = new Date(bVal);
+      comparison = aDate.getTime() - bDate.getTime();
+    }
+    // Numbers
+    else if (typeof aVal === 'number' && typeof bVal === 'number') {
+      comparison = aVal - bVal;
+    }
+    // Strings
+    else {
+      comparison = String(aVal).localeCompare(String(bVal), 'ru-RU');
+    }
+
+    return direction === 'asc' ? comparison : -comparison;
   });
 }
