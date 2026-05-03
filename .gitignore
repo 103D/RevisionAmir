@@ -62,6 +62,7 @@ dist/
 .sublime-workspace
 *.iml
 .vscode-test/
+.continue/
 
 # ============================================================
 # OS
