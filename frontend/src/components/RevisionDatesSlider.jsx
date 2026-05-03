@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { ChevronLeftIcon, ChevronRightIcon } from './Icons';
 import { formatDate } from './utils';
 
@@ -9,24 +9,30 @@ import { formatDate } from './utils';
 function RevisionDatesSlider({ filial, isFeatured }) {
   const [currentIndex, setCurrentIndex] = useState(0);
 
-  const revisionDates = filial.revision_dates || [];
+  // Получаем даты ревизий
+  const revisionDates = useMemo(() => {
+    const dates = filial?.revision_dates || [];
+    return dates.map((d) => new Date(d)).sort((a, b) => a - b);
+  }, [filial?.revision_dates]);
+
   const totalDates = revisionDates.length;
 
-  // If no dates, show placeholder
-  if (totalDates === 0) {
-    return (
-      <div className={`revisionSlider revisionSliderEmpty ${isFeatured ? 'revisionSliderFeatured' : ''}`}>
-        <div className="sliderHeader">
-          <span className="sliderLabel">Даты ревизий</span>
-        </div>
-        <div className="sliderEmptyState">
-          <span>Нет запланированных ревизий</span>
-        </div>
-      </div>
-    );
-  }
-
+  // Текущая дата
   const currentDate = revisionDates[currentIndex];
+
+  // Получаем недостачу и статус для текущей даты
+  const shortage = filial?.revision_shortages?.[currentDate.toISOString().split('T')[0]] || 0;
+  const today = new Date();
+  const todayStr = today.toISOString().split('T')[0];
+  const currentStr = currentDate.toISOString().split('T')[0];
+
+  const status = filial?.revision_statuses?.[currentStr] || 'planned';
+  const isPast = currentDate < today;
+  const isToday = currentDate.toDateString() === today.toDateString();
+  const isFuture = currentDate > today;
+
+  const statusClass = isPast ? 'past' : isToday ? 'today' : 'future';
+  const statusLabel = isPast ? 'Прошлая' : isToday ? 'Сегодня' : 'Будущая';
 
   const goToPrevious = () => {
     setCurrentIndex((prev) => (prev > 0 ? prev - 1 : prev));
@@ -36,15 +42,9 @@ function RevisionDatesSlider({ filial, isFeatured }) {
     setCurrentIndex((prev) => (prev < totalDates - 1 ? prev + 1 : prev));
   };
 
-  // Determine status for current date
-  const today = new Date();
-  const currentDateObj = new Date(currentDate);
-  const isPast = currentDateObj < today;
-  const isToday = currentDateObj.toDateString() === today.toDateString();
-  const isFuture = currentDateObj > today;
-
-  const statusClass = isPast ? 'past' : isToday ? 'today' : 'future';
-  const statusLabel = isPast ? 'Прошлая' : isToday ? 'Сегодня' : 'Будущая';
+  if (totalDates === 0) {
+    return <div className="revisionSlider">Нет дат ревизий</div>;
+  }
 
   return (
     <div className={`revisionSlider ${isFeatured ? 'revisionSliderFeatured' : ''}`}>
@@ -61,8 +61,7 @@ function RevisionDatesSlider({ filial, isFeatured }) {
           className="sliderArrow sliderArrowLeft"
           onClick={goToPrevious}
           disabled={currentIndex === 0}
-          aria-label="Предыдущая дата"
-        >
+          aria-label="Предыдущая дата">
           <ChevronLeftIcon />
         </button>
 
@@ -72,6 +71,15 @@ function RevisionDatesSlider({ filial, isFeatured }) {
             {formatDate(currentDate)}
           </span>
           {isToday && <span className="todayBadge">Сегодня</span>}
+          <div className="sliderInfo">
+            {/* <span className="sliderInfoStatus">
+              Статус: {status === 'planned' ? 'Запланирована' : 'Отложена'}
+            </span> */}
+            <br /> 
+            <span className="sliderInfoShortage">
+              Недостача: {shortage?.toLocaleString() || 0} тг
+            </span>
+          </div>
         </div>
 
         <button
@@ -79,8 +87,7 @@ function RevisionDatesSlider({ filial, isFeatured }) {
           className="sliderArrow sliderArrowRight"
           onClick={goToNext}
           disabled={currentIndex === totalDates - 1}
-          aria-label="Следующая дата"
-        >
+          aria-label="Следующая дата">
           <ChevronRightIcon />
         </button>
       </div>

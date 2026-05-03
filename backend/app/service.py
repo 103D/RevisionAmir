@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import threading
 from calendar import monthrange
 from datetime import date, datetime, timedelta, timezone
 from uuid import uuid4
@@ -24,6 +25,7 @@ class RevisionService:
     def __init__(self, store: RedisStore) -> None:
         self.store = store
         self.holidays_store = RedisHolidaysStore()
+        self._lock = threading.RLock()
 
     @staticmethod
     def _to_date(value: str) -> date:
@@ -223,61 +225,95 @@ direction=1,
         if not isinstance(revision_shortages, dict):
             revision_shortages = {}
 
+        previous_date = raw_record.get("previous_revision_date")
+        next_date = raw_record.get("next_revision_date")
+        shortage = float(raw_record.get("shortage", 0) or 0)
+        if previous_date and str(previous_date) in revision_shortages:
+            shortage = float(revision_shortages[str(previous_date)])
+        elif next_date and str(next_date) in revision_shortages:
+            shortage = float(revision_shortages[str(next_date)])
+
         return {
             "id": raw_record["id"],
             "name": raw_record["name"],
             "first_revision_date": self._to_date(raw_record["first_revision_date"]),
-            "previous_revision_date": self._to_date(raw_record["previous_revision_date"]) if raw_record.get("previous_revision_date") else None,
-            "next_revision_date": self._to_date(raw_record["next_revision_date"]) if raw_record.get("next_revision_date") else None,
+            "previous_revision_date": self._to_date(previous_date) if previous_date else None,
+            "next_revision_date": self._to_date(next_date) if next_date else None,
             "revision_dates": [self._to_date(item) for item in raw_record.get("revision_dates", [])],
             "next_revision_status": self._normalize_status(raw_record.get("next_revision_status")),
-            "shortage": float(raw_record.get("shortage", 0) or 0),
+            "shortage": shortage,
             "revision_shortages": {str(key): float(value) for key, value in revision_shortages.items()},
             "revision_statuses": {str(key): self._normalize_status(value) for key, value in revision_statuses.items()},
             "created_at": self._to_datetime(raw_record["created_at"]),
-"updated_at": self._to_datetime(raw_record["updated_at"]),
+            "updated_at": self._to_datetime(raw_record["updated_at"]),
         }
 
     def _persist_computed_dates(self, record: dict, filials: list[dict], data: dict) -> dict:
-        record.setdefault("shortage", 0)
-        record.setdefault("revision_shortages", {})
+        """
+        Compute previous_revision_date and next_revision_date based on revision_dates.
+        Does NOT modify stored fields; returns computed values for API response.
+        """
+        # Получаем даты
         first_revision_date = self._to_date(record["first_revision_date"])
         revision_dates = [self._to_date(item) for item in record.get("revision_dates", [])]
+        all_dates = set(revision_dates)
+        if first_revision_date:
+            all_dates.add(first_revision_date)
+        all_dates = sorted(all_dates)
+
+        today = date.today()
+
+        past_dates = [d for d in all_dates if d <= today]
+        future_dates = [d for d in all_dates if d > today]
+
+        if past_dates:
+            previous = past_dates[-1]
+        else:
+            # Нет прошедших ревизий, проверяем кратность 3 месяцев от первой ревизии
+            first = first_revision_date
+            months_diff = (today.year - first.year) * 12 + (today.month - first.month)
+            if months_diff % 3 == 0 and today >= first:
+                previous = first
+            else:
+                previous = None
+
+        next_date = future_dates[0] if future_dates else None
+
         occupied_dates = self._collect_occupied_dates(filials, exclude_id=record.get("id"))
         holidays = self._collect_holidays(data)
-        explicit_next_raw = record.get("next_revision_date")
-        explicit_next = self._to_date(explicit_next_raw) if isinstance(explicit_next_raw, str) else None
 
-        if explicit_next is not None:
-            revision_dates = sorted(set(item for item in revision_dates if item > explicit_next))
-            
-            if not revision_dates or len(revision_dates) < 6:
-                generated_dates = self._generate_following_dates_from_next(explicit_next, occupied_dates, holidays)
-                revision_dates = [self._to_date(d) for d in generated_dates]
-            
-            record["revision_dates"] = self._dates_to_iso(revision_dates)
+        # Если нет будущей даты — генерируем новую
+        generated_new_next = False
+        if next_date is None:
+            base_date = all_dates[-1] if all_dates else first_revision_date
+            next_date = self._generate_next_date(base_date, occupied_dates, holidays, today)
+            if next_date not in all_dates:
+                all_dates.append(next_date)
+                all_dates = sorted(set(all_dates))
+                generated_new_next = True
 
-            all_dates = sorted(set([first_revision_date, explicit_next, *revision_dates]))
-            past_dates = [item for item in all_dates if item <= date.today()]
-            previous = past_dates[-1] if past_dates else None
-            next_date = explicit_next
-        else:
-            if not revision_dates:
-                generated_next = self._generate_next_date(first_revision_date, occupied_dates, holidays, date.today())
-                record["next_revision_date"] = generated_next.isoformat()
-                record["revision_dates"] = self._generate_following_dates_from_next(generated_next, occupied_dates, holidays)
-                revision_dates = [self._to_date(item) for item in record["revision_dates"]]
+        # Гарантируем минимум 6 будущих дат после next_date
+        future_after_next = [d for d in all_dates if d > next_date]
+        if len(future_after_next) < 6:
+            additional = self._generate_following_dates_from_next(next_date, occupied_dates, holidays)
+            for d_str in additional:
+                d = self._to_date(d_str)
+                if d not in all_dates:
+                    all_dates.append(d)
+            all_dates = sorted(set(all_dates))
 
-            previous, next_date = self._calculate_previous_next(first_revision_date, revision_dates, occupied_dates, holidays)
-
-        record["previous_revision_date"] = previous.isoformat() if previous else None
-        record["next_revision_date"] = next_date.isoformat() if next_date else None
+        # Не модифицируем record! Только вычисляем
+        # Синхронизируем статусы (для API)
         self._sync_revision_statuses(
-            record,
+            {**record},  # копия, чтобы не менять оригинал
             next_date,
-            [self._to_date(item) for item in record.get("revision_dates", [])],
+            all_dates,
         )
-        return record
+
+        return {
+            "previous_revision_date": previous.isoformat() if previous else None,
+            "next_revision_date": next_date.isoformat() if next_date else None,
+        }
 
     def _find_index(self, filials: list[dict], filial_id: str) -> int:
         for index, filial in enumerate(filials):
@@ -286,151 +322,140 @@ direction=1,
         raise HTTPException(status_code=404, detail="Filial not found")
 
     def list_filials(self) -> list[dict]:
-        data = self.store.read()
-        filials = data.get("filials", [])
-
-        changed = False
-        for filial in filials:
-            prev_before = filial.get("previous_revision_date")
-            next_before = filial.get("next_revision_date")
-            self._persist_computed_dates(filial, filials, data)
-            if filial.get("previous_revision_date") != prev_before or filial.get("next_revision_date") != next_before:
-                changed = True
-
-        if changed:
-            self.store.write(data)
-
-        return [self._format_record(item) for item in filials]
+        with self._lock:
+            data = self.store.read()
+            filials = data.get("filials", [])
+            result = []
+            for filial in filials:
+                computed = self._persist_computed_dates(filial, filials, data)
+                filial_with_computed = {**filial, **computed}
+                result.append(self._format_record(filial_with_computed))
+            return result
 
     def get_filial(self, filial_id: str) -> dict:
-        data = self.store.read()
-        filials = data.get("filials", [])
-        index = self._find_index(filials, filial_id)
-
-        filials[index] = self._persist_computed_dates(filials[index], filials, data)
-        self.store.write(data)
-
-        return self._format_record(filials[index])
+        with self._lock:
+            data = self.store.read()
+            filials = data.get("filials", [])
+            index = self._find_index(filials, filial_id)
+            filial = filials[index]
+            computed = self._persist_computed_dates(filial, filials, data)
+            filial_with_computed = {**filial, **computed}
+            return self._format_record(filial_with_computed)
 
     def create_filial(self, payload: FilialCreate) -> dict:
-        data = self.store.read()
-        filials = data.setdefault("filials", [])
+        with self._lock:
+            data = self.store.read()
+            filials = data.setdefault("filials", [])
 
-        now = datetime.now(timezone.utc).isoformat()
-        record = {
-            "id": str(uuid4()),
-            "name": payload.name,
-            "first_revision_date": payload.first_revision_date.isoformat(),
-            "previous_revision_date": None,
-            "next_revision_date": None,
-            "shortage": float(payload.shortage),
-            "revision_dates": self._dates_to_iso(payload.revision_dates),
-            "next_revision_status": "planned",
-            "revision_statuses": {},
-            "revision_shortages": {},
-            "created_at": now,
-            "updated_at": now,
-        }
-
-        self._persist_computed_dates(record, filials, data)
-        filials.append(record)
-        self.store.write(data)
-
-        return self._format_record(record)
+            now = datetime.now(timezone.utc).isoformat()
+            record = {
+                "id": str(uuid4()),
+                "name": payload.name,
+                "first_revision_date": payload.first_revision_date.isoformat(),
+                "shortage": float(payload.shortage),
+                "revision_dates": self._dates_to_iso(payload.revision_dates),
+                "revision_statuses": {},
+                "revision_shortages": {},
+                "created_at": now,
+                "updated_at": now,
+            }
+            # previous_revision_date и next_revision_date НЕ сохраняем!
+            filials.append(record)
+            self.store.write(data)
+            # Для API-ответа вычисляем computed
+            computed = self._persist_computed_dates(record, filials, data)
+            return self._format_record({**record, **computed})
 
     def update_filial(self, filial_id: str, payload: FilialUpdate) -> dict:
-        data = self.store.read()
-        filials = data.get("filials", [])
-        index = self._find_index(filials, filial_id)
-        record = filials[index]
+        with self._lock:
+            data = self.store.read()
+            filials = data.get("filials", [])
+            index = self._find_index(filials, filial_id)
+            record = filials[index]
 
-        if payload.name is not None:
-            record["name"] = payload.name
-
-        if payload.first_revision_date is not None:
-            record["first_revision_date"] = payload.first_revision_date.isoformat()
-
-        if payload.shortage is not None:
-            record["shortage"] = float(payload.shortage)
-            current_next_date = record.get("next_revision_date")
-            if isinstance(current_next_date, str):
-                revision_shortages = record.setdefault("revision_shortages", {})
-                revision_shortages[current_next_date] = float(payload.shortage)
-
-        record["updated_at"] = datetime.now(timezone.utc).isoformat()
-        self._persist_computed_dates(record, filials, data)
-        filials[index] = record
-        self.store.write(data)
-
-        return self._format_record(record)
+            if payload.name is not None:
+                record["name"] = payload.name
+            if payload.first_revision_date is not None:
+                record["first_revision_date"] = payload.first_revision_date.isoformat()
+            record["updated_at"] = datetime.now(timezone.utc).isoformat()
+            # previous_revision_date и next_revision_date НЕ сохраняем!
+            filials[index] = record
+            self.store.write(data)
+            computed = self._persist_computed_dates(record, filials, data)
+            return self._format_record({**record, **computed})
 
     def delete_filial(self, filial_id: str) -> None:
-        data = self.store.read()
-        filials = data.get("filials", [])
-        index = self._find_index(filials, filial_id)
-        filials.pop(index)
-        self.store.write(data)
+        with self._lock:
+            data = self.store.read()
+            filials = data.get("filials", [])
+            index = self._find_index(filials, filial_id)
+            filials.pop(index)
+            self.store.write(data)
 
     def update_revision_dates(self, filial_id: str, payload: RevisionDatesUpdate) -> dict:
-        data = self.store.read()
-        filials = data.get("filials", [])
-        index = self._find_index(filials, filial_id)
-        record = filials[index]
+        with self._lock:
+            data = self.store.read()
+            filials = data.get("filials", [])
+            index = self._find_index(filials, filial_id)
+            record = filials[index]
 
-        # first_revision_date remains immutable here; only subsequent dates are editable.
-        record["revision_dates"] = self._dates_to_iso(payload.revision_dates)
-        record["updated_at"] = datetime.now(timezone.utc).isoformat()
-        self._persist_computed_dates(record, filials, data)
+            # first_revision_date remains immutable here; only subsequent dates are editable.
+            record["revision_dates"] = self._dates_to_iso(payload.revision_dates)
+            record["updated_at"] = datetime.now(timezone.utc).isoformat()
+            self._persist_computed_dates(record, filials, data)
 
-        filials[index] = record
-        self.store.write(data)
+            filials[index] = record
+            self.store.write(data)
 
-        return self._format_record(record)
+            return self._format_record(record)
 
     def update_next_revision(self, filial_id: str, payload: NextRevisionUpdate) -> dict:
-        data = self.store.read()
-        filials = data.get("filials", [])
-        index = self._find_index(filials, filial_id)
-        record = filials[index]
-        current_next_iso = record.get("next_revision_date")
-        requested_next_iso = payload.next_revision_date.isoformat()
+        with self._lock:
+            data = self.store.read()
+            filials = data.get("filials", [])
+            index = self._find_index(filials, filial_id)
+            record = filials[index]
+            requested_next_iso = payload.next_revision_date.isoformat()
 
-        occupied_dates = self._collect_occupied_dates(filials, exclude_id=record.get("id"))
-        holidays = self._collect_holidays(data)
+            occupied_dates = self._collect_occupied_dates(filials, exclude_id=record.get("id"))
+            holidays = self._collect_holidays(data)
 
-        next_revision_date = self._shift_to_allowed_date(
-            payload.next_revision_date,
-            occupied_dates,
-            holidays,
-            direction=1,
-        )
-        record["next_revision_date"] = next_revision_date.isoformat()
-        record["revision_dates"] = self._generate_following_dates_from_next(next_revision_date, occupied_dates, holidays)
-        auto_status = "postponed" if current_next_iso and current_next_iso != requested_next_iso else "planned"
-        revision_shortages = record.setdefault("revision_shortages", {})
-        revision_shortages[next_revision_date.isoformat()] = float(record.get("shortage", 0) or 0)
-        self._sync_revision_statuses(
-            record,
-            next_revision_date,
-            [self._to_date(item) for item in record["revision_dates"]],
-            next_status=auto_status,
-        )
-
-        first_revision_date = self._to_date(record["first_revision_date"])
-        all_dates = sorted(
-            set(
-                [
-                    first_revision_date,
-                    next_revision_date,
-                    *[self._to_date(item) for item in record.get("revision_dates", [])],
-                ]
+            # Сдвигаем дату на разрешённую
+            next_revision_date = self._shift_to_allowed_date(
+                payload.next_revision_date,
+                occupied_dates,
+                holidays,
+                direction=1,
             )
-        )
-        past_dates = [item for item in all_dates if item <= date.today()]
-        record["previous_revision_date"] = past_dates[-1].isoformat() if past_dates else None
-        record["updated_at"] = datetime.now(timezone.utc).isoformat()
 
-        filials[index] = record
-        self.store.write(data)
+            # Обновляем revision_dates (добавляем дату, если её нет)
+            revision_dates = [self._to_date(item) for item in record.get("revision_dates", [])]
+            if next_revision_date not in revision_dates:
+                revision_dates.append(next_revision_date)
+            revision_dates = sorted(set(revision_dates))
+            record["revision_dates"] = self._dates_to_iso(revision_dates)
 
-        return self._format_record(record)
+            revision_statuses = record.setdefault("revision_statuses", {})
+            revision_shortages = record.setdefault("revision_shortages", {})
+            today = date.today()
+
+            # Валидация: статус "planned" нельзя установить на прошедшую дату
+            if next_revision_date <= today:
+                if payload.status == "planned":
+                    raise HTTPException(
+                        status_code=400,
+                        detail="Невозможно установить статус 'planned' на прошедшую дату. Используйте статус 'postponed' или укажите будущую дату."
+                    )
+                revision_statuses[next_revision_date.isoformat()] = "done"
+                revision_shortages[next_revision_date.isoformat()] = float(record.get("shortage", 0) or 0)
+            else:
+                auto_status = payload.status if hasattr(payload, "status") and payload.status in self.ALLOWED_STATUSES else "planned"
+                revision_statuses[next_revision_date.isoformat()] = auto_status
+
+            record["updated_at"] = datetime.now(timezone.utc).isoformat()
+            filials[index] = record
+            self.store.write(data)
+
+            # previous_revision_date и next_revision_date НЕ сохраняем!
+            computed = self._persist_computed_dates(record, filials, data)
+            return self._format_record({**record, **computed})

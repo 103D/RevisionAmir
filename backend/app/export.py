@@ -64,7 +64,7 @@ def build_filials_excel(filials: list[dict[str, Any]]) -> bytes:
     # Headers
     headers = [
         "ID", "Название филиала", "Первая ревизия", "Предыдущая ревизия",
-        "Следующая ревизия", "Статус", "Недостача", "Даты ревизий"
+        "Следующая ревизия", "Статус", "Недостача", "Сумма недостачи", "Даты ревизий"
     ]
 
     # Write header row
@@ -84,6 +84,10 @@ def build_filials_excel(filials: list[dict[str, Any]]) -> bytes:
             _to_iso_string(d) for d in revision_dates_list if d
         ) if isinstance(revision_dates_list, list) else ""
 
+        # Сумма недостачи по всем ревизиям
+        revision_shortages = filial.get("revision_shortages", {})
+        total_shortage = sum(float(v) for v in revision_shortages.values()) if revision_shortages else 0
+
         row_data = [
             filial.get("id", ""),
             filial.get("name", ""),
@@ -92,6 +96,7 @@ def build_filials_excel(filials: list[dict[str, Any]]) -> bytes:
             _to_iso_string(filial.get("next_revision_date")),
             filial.get("next_revision_status", "planned"),
             filial.get("shortage", 0),
+            total_shortage,
             revision_dates_str,
         ]
 

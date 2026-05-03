@@ -14,6 +14,24 @@
 - [Тестирование](#тестирование)
 - [Конфигурация уведомлений](#конфигурация-уведомлений)
 - [Экспорт данных](#экспорт-данных)
+- [Changelog](#changelog)
+
+## 🆕 Changelog
+
+### [1.1.0] - 2025-01-XX
+#### Исправления
+- ✅ **Thread-safety**: Добавлены блокировки `threading.RLock()` для всех операций с хранилищем
+- ✅ **Валидация статусов**: Запрещена установка статуса "planned" на прошедшие даты
+- ✅ **Vercel deployment**: Удалена ложная логика работы с переменными окружения, теперь всегда используется Redis
+- ✅ **Performance**: Добавлен debounce (300ms) для inline-редакторов на frontend
+- ✅ **Код-ревью**: Исправлены все критические и предупреждающие issues
+
+#### Улучшения
+- Упрощена архитектура `RedisStore` (удален `EnvVarStore`)
+- Улучшена обработка ошибок при подключении к Redis
+- Добавлена четкая документация по использованию хранилищ
+
+### [1.0.0] - Первоначальный релиз
 
 ## 🚀 Возможности
 
@@ -36,44 +54,56 @@
 ## 🛠 Технологии
 
 ### Backend
-- **Node.js** + Express
-- **JSON file storage** + custom repository layer
-- **JWT** (для будущей аутентификации)
+- **Python 3.11+** + FastAPI
+- **Redis** (основное хранилище) + JSON file fallback (для разработки)
+- **Pydantic** (валидация данных)
+- **openpyxl** (экспорт в Excel)
 
 ### Frontend
 - **React 18** + Vite
-- **React Query** (стейт-менеджмент)
-- **React Router** (маршрутизация)
+- **@tanstack/react-query** (стейт-менеджмент)
 - **Axios** (HTTP клиент)
+- **react-hot-toast** (уведомления)
 
 ### Тестирование
-- **Jest** (юнит-тесты)
-- **Supertest** (интеграционные тесты)
+- **pytest** (рекомендуется добавить)
 
 ## 📁 Структура проекта
 
 ```
 Revision/
 ├── backend/
-│   ├── src/
-│   │   ├── config/         # Конфигурация и константы
-│   │   ├── models/         # JSON-backed repositories (Filial, Holiday, Revision)
-│   │   ├── storage/        # File store and query helpers
-│   │   ├── routes/         # API маршруты
-│   │   ├── services/       # Бизнес-логика
-│   │   ├── middleware/     # Промежуточное ПО
-│   │   └── index.js        # Точка входа
-│   ├── tests/
-│   │   ├── unit/           # Юнит-тесты
-│   │   └── integration/    # Интеграционные тесты
-│   └── package.json
+│   ├── app/
+│   │   ├── __init__.py
+│   │   ├── config.py           # Конфигурация
+│   │   ├── main.py             # FastAPI приложение
+│   │   ├── service.py          # Бизнес-логика (RevisionService)
+│   │   ├── store.py            # JSON file storage (только для разработки)
+│   │   ├── redis_store.py      # Redis storage (production)
+│   │   ├── redis_holidays_store.py  # Redis storage для праздников
+│   │   ├── schemas.py          # Pydantic модели
+│   │   ├── export.py           # Экспорт в Excel
+│   │   ├── holidays.py         # API для праздников
+│   │   └── runtime_check.py    # Утилиты для проверки окружения
+│   ├── data/
+│   │   ├── store.json          # Локальное хранилище (dev)
+│   │   └── holidays.json.example
+│   ├── migrations/
+│   │   └── 001_init.sql
+│   ├── requirements.txt
+│   └── REDIS_SETUP.md          # Инструкция по настройке Redis
 │
 ├── frontend/
 │   ├── src/
-│   │   ├── components/    # React компоненты
-│   │   ├── services/      # API сервисы
-│   │   ├── hooks/         # Custom hooks
-│   │   └── App.jsx        # Главный компонент
+│   │   ├── components/         # React компоненты
+│   │   │   ├── FilialsPage.jsx
+│   │   │   ├── FilialCard.jsx
+│   │   │   ├── CreateFilialForm.jsx
+│   │   │   └── RevisionDatesSlider.jsx
+│   │   ├── services/
+│   │   │   └── api.js          # API клиент
+│   │   ├── App.jsx
+│   │   └── main.jsx
 │   ├── package.json
 │   └── vite.config.js
 │
@@ -83,15 +113,18 @@ Revision/
 ## ⚡ Быстрый старт
 
 ### Требования
+- Python 3.11+
 - Node.js 18+
+- Redis (опционально, для production)
 
 ### 1. Клонирование и установка
 
 ```bash
-# Клонировать репозиторий
+# Backend
 cd backend
-npm install
+pip install -r requirements.txt
 
+# Frontend
 cd ../frontend
 npm install
 ```
@@ -102,22 +135,15 @@ npm install
 
 ```env
 # Server
-PORT=3000
-NODE_ENV=development
+APP_HOST=0.0.0.0
+APP_PORT=8000
 
-# JSON storage
-REVISION_STORE_PATH=./data/store.json
+# Redis (опционально, для production)
+REDIS_URL=rediss://default:your-redis-password@your-redis-host:6379
 
-# Email (опционально)
-SMTP_HOST=smtp.gmail.com
-SMTP_PORT=587
-SMTP_USER=your-email@gmail.com
-SMTP_PASSWORD=your-app-password
-FROM_EMAIL=noreply@revisions.local
-
-# Telegram (опционально)
-TELEGRAM_BOT_TOKEN=your-bot-token
-TELEGRAM_CHAT_ID=your-chat-id
+# Data directory
+DATA_DIR=./data
+STORE_FILE=store.json
 ```
 
 ### 3. Запуск
@@ -125,7 +151,7 @@ TELEGRAM_CHAT_ID=your-chat-id
 ```bash
 # Backend (в одной консоли)
 cd backend
-npm run dev
+python -m uvicorn app.main:app --reload
 
 # Frontend (в другой консоли)
 cd frontend
@@ -136,17 +162,39 @@ npm run dev
 
 ## 🗄 Настройка хранилища
 
+### Выбор хранилища
+
+**Для разработки:**
+- По умолчанию используется локальный JSON файл (`backend/data/store.json`)
+- Не требует дополнительных настроек
+
+**Для production (рекомендуется):**
+- Используйте Redis (Upstash, AWS ElastiCache и т.д.)
+- Данные сохраняются между вызовами serverless функций
+
 ### Заполнение тестовыми данными
+
+Скопируйте пример данных:
 
 ```bash
 cd backend
-npm run seed
+cp data/holidays.json.example data/holidays.json
 ```
 
-Будет создано:
-- 5 филиалов (Астана, Алматы, Шымкент, Актобе, Караганда)
-- Праздники Казахстана на 2024-2026 годы
-- JSON-файл с данными в `backend/data/store.json`
+Файл `store.json` создается автоматически при первом запуске.
+
+### Миграция на Redis
+
+1. Установите Redis:
+   ```bash
+   pip install redis
+   ```
+
+2. Добавьте `REDIS_URL` в `.env`
+
+3. При запуске данные автоматически мигрируются из JSON в Redis
+
+Подробнее: [REDIS_SETUP.md](backend/REDIS_SETUP.md)
 
 ## 📡 API Endpoints
 
@@ -155,40 +203,33 @@ npm run seed
 | Method | Endpoint | Описание |
 |--------|----------|----------|
 | GET | `/api/v1/filials` | Список всех филиалов |
-| GET | `/api/v1/filials/:id` | Получить филиал по ID |
+| GET | `/api/v1/filials/{id}` | Получить филиал по ID |
 | POST | `/api/v1/filials` | Создать филиал |
-| PUT | `/api/v1/filials/:id` | Обновить филиал |
-| DELETE | `/api/v1/filials/:id` | Удалить филиал |
-| GET | `/api/v1/filials/:id/revisions` | Ревизии филиала |
+| PUT | `/api/v1/filials/{id}` | Обновить филиал |
+| PUT | `/api/v1/filials/{id}/next-revision` | Обновить следующую ревизию |
+| DELETE | `/api/v1/filials/{id}` | Удалить филиал |
 
 ### Праздники
 
 | Method | Endpoint | Описание |
 |--------|----------|----------|
 | GET | `/api/v1/holidays` | Список всех праздников |
-| GET | `/api/v1/holidays/:id` | Получить праздник по ID |
 | POST | `/api/v1/holidays` | Создать праздник |
-| PUT | `/api/v1/holidays/:id` | Обновить праздник |
-| DELETE | `/api/v1/holidays/:id` | Удалить праздник |
+| PUT | `/api/v1/holidays/{id}` | Обновить праздник |
+| DELETE | `/api/v1/holidays/{id}` | Удалить праздник |
 
-### Ревизии
-
-| Method | Endpoint | Описание |
-|--------|----------|----------|
-| GET | `/api/v1/revisions/all` | Все ревизии (основной endpoint) |
-| GET | `/api/v1/revisions` | Список ревизий с фильтрами |
-| GET | `/api/v1/revisions/stats` | Статистика |
-| GET | `/api/v1/revisions/upcoming` | Предстоящие ревизии |
-| POST | `/api/v1/revisions/regenerate` | Перегенерировать ревизии |
-| GET | `/api/v1/revisions/export` | Экспорт (csv/excel) |
-
-### Уведомления
+### Экспорт
 
 | Method | Endpoint | Описание |
 |--------|----------|----------|
-| POST | `/api/v1/notifications/send` | Отправить уведомления |
-| GET | `/api/v1/notifications/test/email` | Тест email |
-| GET | `/api/v1/notifications/test/telegram` | Тест Telegram |
+| GET | `/api/v1/export/filials` | Экспорт филиалов в Excel |
+| GET | `/api/v1/export/holidays` | Экспорт праздников в Excel |
+
+### Здоровье
+
+| Method | Endpoint | Описание |
+|--------|----------|----------|
+| GET | `/health` | Проверка работоспособности |
 
 ## 🔄 Генерация ревизий
 
@@ -199,116 +240,131 @@ npm run seed
    - Пятница, суббота, воскресенье
    - Праздничные дни
 3. **Минимальное расстояние**: ≥2 дня между ревизиями разных филиалов
+4. **Горизонт генерации**: 24 месяца вперед
 
 ### Константы
 
-```javascript
-// backend/src/config/constants.js
-REVISION_INTERVAL_MONTHS = 3    // Интервал в месяцах
-MIN_DAYS_BETWEEN_REVISIONS = 2   // Мин. дней между филиалами
-EXCLUDED_DAYS = [5, 6, 0]        // Пятница, суббота, воскресенье
+```python
+# backend/app/service.py
+EXCLUDED_WEEKDAYS = {4, 5, 6}  # Пятница, суббота, воскресенье (Python: 0=Monday)
+GENERATION_HORIZON_MONTHS = 24  # Генерация на 2 года вперед
+ALLOWED_STATUSES = {"planned", "postponed"}
 ```
+
+### Автоматическое смещение дат
+
+Если выбранная дата попадает на выходной или праздник, система автоматически сдвигает её на ближайший рабочий день с учетом минимального расстояния от других ревизий.
 
 ## 🧪 Тестирование
 
 ```bash
-# Все тесты
+# Backend (требуется установка pytest)
 cd backend
-npm test
+pip install pytest
+python -m pytest
 
-# Только юнит-тесты
-npm run test:unit
-
-# Только интеграционные тесты
-npm run test:integration
+# Frontend (сборка)
+cd frontend
+npm run build
 ```
 
-### Покрытие тестами
+### Планируется
 
-- ✅ Генерация дат (исключение выходных)
-- ✅ Исключение праздников
-- ✅ Минимальное расстояние между филиалами
-- ✅ API endpoints
-- ✅ Валидация данных
+- Юнит-тесты для `RevisionService`
+- Интеграционные тесты для API
+- E2E тесты для frontend
 
-## 📧 Конфигурация уведомлений
+## 📧 Уведомления
 
-### Email (Gmail)
-
-1. Включите 2FA на аккаунте Google
-2. Создайте пароль приложения: https://myaccount.google.com/apppasswords
-3. Добавьте в `.env`:
-   ```
-   SMTP_USER=your-email@gmail.com
-   SMTP_PASSWORD=xxxx xxxx xxxx xxxx
-   ```
-
-### Telegram
-
-1. Создайте бота через @BotFather
-2. Получите токен бота
-3. Получите chat ID через @userinfobot
-4. Добавьте в `.env`:
-   ```
-   TELEGRAM_BOT_TOKEN=your-bot-token
-   TELEGRAM_CHAT_ID=your-chat-id
-   ```
+> ⚠️ **Примечание**: Система уведомлений (Email/Telegram) запланирована для следующей версии.
 
 ## 📊 Экспорт данных
 
 ### Примеры использования API
 
 ```bash
-# Excel
-curl -X GET "http://localhost:3000/api/v1/revisions/export?format=excel" \
-  -H "Content-Type: application/json" \
-  -o revisions.xlsx
+# Excel - филиалы
+curl -X GET "http://localhost:8000/api/v1/export/filials" \
+  -o filials.xlsx
 
-# CSV
-curl -X GET "http://localhost:3000/api/v1/revisions/export?format=csv" \
-  -H "Content-Type: application/json" \
-  -o revisions.csv
+# Excel - праздники
+curl -X GET "http://localhost:8000/api/v1/export/holidays" \
+  -o holidays.xlsx
 
-# По филиалу
-curl -X GET "http://localhost:3000/api/v1/revisions/export?filial_id=UUID" \
-  -o revisions filial.xlsx
+# Проверка здоровья
+curl -X GET "http://localhost:8000/health"
 ```
 
-## 📝 Примеры данных
-
-### Создание филиала
+### Создание филиала через API
 
 ```bash
-curl -X POST "http://localhost:3000/api/v1/filials" \
+curl -X POST "http://localhost:8000/api/v1/filials" \
   -H "Content-Type: application/json" \
   -d '{
     "name": "Филиал Астана-Север",
     "first_revision_date": "2024-02-01",
-    "address": "г. Астана, ул. Сыганак, 20",
-    "contact_email": "astana-north@example.kz"
+    "shortage": 0
   }'
 ```
 
-### Создание праздника
+### Обновление следующей ревизии
 
 ```bash
-curl -X POST "http://localhost:3000/api/v1/holidays" \
+curl -X PUT "http://localhost:8000/api/v1/filials/{filial_id}/next-revision" \
   -H "Content-Type: application/json" \
   -d '{
-    "name": "День города",
-    "date": "2024-09-15",
-    "is_recurring": true
+    "next_revision_date": "2024-06-15",
+    "status": "planned"
   }'
+```
+
+## 📝 Примеры данных
+
+### Структура филиала
+
+```json
+{
+  "id": "uuid",
+  "name": "Филиал Астана",
+  "first_revision_date": "2024-01-15",
+  "previous_revision_date": "2024-04-15",
+  "next_revision_date": "2024-07-15",
+  "next_revision_status": "planned",
+  "shortage": 0,
+  "revision_dates": [
+    "2024-01-15",
+    "2024-04-15",
+    "2024-07-15",
+    "2024-10-15"
+  ],
+  "revision_statuses": {
+    "2024-01-15": "done",
+    "2024-04-15": "done",
+    "2024-07-15": "planned"
+  },
+  "revision_shortages": {
+    "2024-01-15": 0,
+    "2024-04-15": 15000
+  },
+  "created_at": "2024-01-01T10:00:00Z",
+  "updated_at": "2024-06-01T14:30:00Z"
+}
 ```
 
 ## 🔧 Масштабирование
 
 При масштабировании до 100+ филиалов:
 
-1. **Индексы** - уже настроены в моделях
-2. **Кеширование** - React Query автоматически кеширует запросы
-3. **Пагинация** - поддерживается на всех list endpoints
-4. **Очереди** - для уведомлений рекомендуется использовать Bull/Redis
+1. **Thread-safety**: Все операции с хранилищем защищены `threading.RLock()`
+2. **Кеширование**: React Query автоматически кеширует запросы
+3. **Redis**: Обязательно для production deployment
+4. **База данных**: При росте до 1000+ филиалов рекомендуется миграция на PostgreSQL
+
+### Производительность
+
+- Debounce 300ms на inline-редакторах снижает количество перерисовок
+- Lazy loading компонентов через `Suspense`
+- Оптимистичные обновления через React Query
 
 ## 📄 Лицензия
 

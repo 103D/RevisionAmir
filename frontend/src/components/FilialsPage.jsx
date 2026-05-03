@@ -6,8 +6,15 @@ import { filialsApi, exportApi } from '../services/api';
 import FilialCard from './FilialCard';
 import CreateFilialForm from './CreateFilialForm';
 import RevisionDatesSlider from './RevisionDatesSlider';
-import { getStatusClass, sortFilials, sortBy } from './utils';
-import { DownloadIcon, GridIcon, TableIcon, TrashIcon, ChevronUpIcon, ChevronDownIcon } from './Icons';
+import { formatDate, getStatusClass, sortFilials, sortBy } from './utils';
+import {
+  DownloadIcon,
+  GridIcon,
+  TableIcon,
+  TrashIcon,
+  ChevronUpIcon,
+  ChevronDownIcon,
+} from './Icons';
 import './FilialsPage.css';
 
 /**
@@ -142,10 +149,7 @@ function FilialsPage() {
     if (!state) return;
     const amount = Number(state.shortage);
     if (Number.isNaN(amount) || amount < 0) return;
-    updateShortageMutation.mutate(
-      { id, shortage: amount },
-      { onSuccess: () => cancelEdit(id) },
-    );
+    updateShortageMutation.mutate({ id, shortage: amount }, { onSuccess: () => cancelEdit(id) });
   };
 
   const deleteFilial = (filial) => {
@@ -172,16 +176,14 @@ function FilialsPage() {
             type="button"
             className={`viewButton ${viewMode === 'cards' ? 'active' : ''}`}
             onClick={() => setViewMode('cards')}
-            title="Вид карточками"
-          >
+            title="Вид карточками">
             <GridIcon /> Карточки
           </button>
           <button
             type="button"
             className={`viewButton ${viewMode === 'table' ? 'active' : ''}`}
             onClick={() => setViewMode('table')}
-            title="Таблица"
-          >
+            title="Таблица">
             <TableIcon /> Таблица
           </button>
         </div>
@@ -194,18 +196,16 @@ function FilialsPage() {
               type="button"
               className="exportButton"
               onClick={() => exportFilialsMutation.mutate()}
-              disabled={exportFilialsMutation.isPending}
-            >
+              disabled={exportFilialsMutation.isPending}>
               <DownloadIcon /> Экспорт филиалов (Excel)
             </button>
-            <button
+            {/* <button
               type="button"
               className="exportButton"
               onClick={() => exportHolidaysMutation.mutate()}
-              disabled={exportHolidaysMutation.isPending}
-            >
+              disabled={exportHolidaysMutation.isPending}>
               <DownloadIcon /> Экспорт праздников (Excel)
-            </button>
+            </button> */}
           </div>
         </div>
       </div>
@@ -251,39 +251,33 @@ function FilialsPage() {
                 <tr>
                   <th onClick={() => handleSort('name')} className="sortable">
                     Название
-                    {tableSort.key === 'name' && (
-                      tableSort.dir === 'asc' ? <ChevronUpIcon /> : <ChevronDownIcon />
-                    )}
+                    {tableSort.key === 'name' &&
+                      (tableSort.dir === 'asc' ? <ChevronUpIcon /> : <ChevronDownIcon />)}
                   </th>
                   <th onClick={() => handleSort('first_revision_date')} className="sortable">
                     Первая ревизия
-                    {tableSort.key === 'first_revision_date' && (
-                      tableSort.dir === 'asc' ? <ChevronUpIcon /> : <ChevronDownIcon />
-                    )}
+                    {tableSort.key === 'first_revision_date' &&
+                      (tableSort.dir === 'asc' ? <ChevronUpIcon /> : <ChevronDownIcon />)}
                   </th>
                   <th onClick={() => handleSort('previous_revision_date')} className="sortable">
                     Предыдущая
-                    {tableSort.key === 'previous_revision_date' && (
-                      tableSort.dir === 'asc' ? <ChevronUpIcon /> : <ChevronDownIcon />
-                    )}
+                    {tableSort.key === 'previous_revision_date' &&
+                      (tableSort.dir === 'asc' ? <ChevronUpIcon /> : <ChevronDownIcon />)}
                   </th>
                   <th onClick={() => handleSort('next_revision_date')} className="sortable">
                     Следующая
-                    {tableSort.key === 'next_revision_date' && (
-                      tableSort.dir === 'asc' ? <ChevronUpIcon /> : <ChevronDownIcon />
-                    )}
+                    {tableSort.key === 'next_revision_date' &&
+                      (tableSort.dir === 'asc' ? <ChevronUpIcon /> : <ChevronDownIcon />)}
                   </th>
                   <th onClick={() => handleSort('next_revision_status')} className="sortable">
                     Статус
-                    {tableSort.key === 'next_revision_status' && (
-                      tableSort.dir === 'asc' ? <ChevronUpIcon /> : <ChevronDownIcon />
-                    )}
+                    {tableSort.key === 'next_revision_status' &&
+                      (tableSort.dir === 'asc' ? <ChevronUpIcon /> : <ChevronDownIcon />)}
                   </th>
                   <th onClick={() => handleSort('shortage')} className="sortable numeric">
                     Недостача
-                    {tableSort.key === 'shortage' && (
-                      tableSort.dir === 'asc' ? <ChevronUpIcon /> : <ChevronDownIcon />
-                    )}
+                    {tableSort.key === 'shortage' &&
+                      (tableSort.dir === 'asc' ? <ChevronUpIcon /> : <ChevronDownIcon />)}
                   </th>
                   <th>Даты ревизий</th>
                   <th className="actions-col">Действия</th>
@@ -293,9 +287,17 @@ function FilialsPage() {
                 {sortedTableFilials.map((filial) => (
                   <tr key={filial.id}>
                     <td className="col-name">{filial.name}</td>
-                    <td>{filial.first_revision_date}</td>
-                    <td>{filial.previous_revision_date || '-'}</td>
-                    <td>{filial.next_revision_date || '-'}</td>
+                    <td>{formatDate(filial.first_revision_date)}</td>
+                    <td>
+                      {filial.previous_revision_date ? (
+                        formatDate(filial.previous_revision_date)
+                      ) : (
+                        <span className="emptyCell">Нет проведённых ревизий</span>
+                      )}
+                    </td>
+                    <td>
+                      {filial.next_revision_date ? formatDate(filial.next_revision_date) : '-'}
+                    </td>
                     <td>
                       <span className={`statusBadge ${filial.next_revision_status}`}>
                         {filial.next_revision_status === 'planned' ? 'Запланирована' : 'Отложена'}
@@ -316,8 +318,7 @@ function FilialsPage() {
                           className="actionButton delete"
                           onClick={() => deleteFilial(filial)}
                           disabled={deleteMutation.isPending}
-                          title="Удалить"
-                        >
+                          title="Удалить">
                           <TrashIcon />
                         </button>
                       </div>

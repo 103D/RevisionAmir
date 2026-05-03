@@ -1,6 +1,31 @@
+import { useState, useEffect, useRef } from 'react';
 import { DeleteIcon, EditIcon } from './Icons';
 import { formatDate, formatMoney, getStatusClass, getStatusColor } from './utils';
 import RevisionDatesSlider from './RevisionDatesSlider';
+
+// Debounce helper
+function useDebouncedCallback(callback, delay) {
+  const timeoutRef = useRef(null);
+
+  useEffect(() => {
+    return () => {
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
+    };
+  }, []);
+
+  const debouncedCallback = (...args) => {
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+    }
+    timeoutRef.current = setTimeout(() => {
+      callback(...args);
+    }, delay);
+  };
+
+  return debouncedCallback;
+}
 
 /**
  * Next Revision Date Editor Component
@@ -20,6 +45,11 @@ function NextRevisionEditor({
   const statusColor = getStatusColor(statusClass);
   const isEditing = editState?.editing === 'next';
 
+  // Debounced state change for date input (300ms)
+  const debouncedStateChange = useDebouncedCallback((newState) => {
+    onStateChange(newState);
+  }, 300);
+
   if (isEditing) {
     return (
       <div className="inlineEdit">
@@ -27,7 +57,7 @@ function NextRevisionEditor({
           type="date"
           value={editState.nextDate}
           onChange={(e) =>
-            onStateChange({
+            debouncedStateChange({
               ...editState,
               nextDate: e.target.value,
             })
@@ -90,6 +120,11 @@ function ShortageEditor({
 }) {
   const isEditing = editState?.editing === 'shortage';
 
+  // Debounced state change for shortage input (300ms)
+  const debouncedStateChange = useDebouncedCallback((newState) => {
+    onStateChange(newState);
+  }, 300);
+
   if (isEditing) {
     return (
       <div className="inlineEdit">
@@ -99,7 +134,7 @@ function ShortageEditor({
           step="0.01"
           value={editState.shortage}
           onChange={(e) =>
-            onStateChange({
+            debouncedStateChange({
               ...editState,
               shortage: e.target.value,
             })
@@ -169,14 +204,6 @@ function FilialCard({
       {/* Card Header */}
       <header className="cardHead">
         <h3 className={isFeatured ? 'cardTitle featuredTitle' : 'cardTitle'}>{filial.name}</h3>
-        {/* <span
-          className="statusIndicator"
-          style={{
-            backgroundColor: statusColor.indicator,
-            width: isFeatured ? '16px' : '12px',
-            height: isFeatured ? '16px' : '12px',
-          }}
-        /> */}
         <button
           type="button"
           className="deleteButton"
@@ -188,12 +215,17 @@ function FilialCard({
         </button>
       </header>
 
-      {/* Next Revision Date Block */}
+      {/* Revision Dates Info */}
       <div className="dateBlock">
         <div className={isFeatured ? 'nextDateBlock nextDateButtonFeatured' : 'nextDateBlock'}>
           <span className={isFeatured ? 'metaLabel metaLabelFeatured' : 'metaLabel'}>
             Следующая ревизия
           </span>
+          {/* <div className="dateRow">
+            <span className="dateLabel">
+              {filial.next_revision_date ? formatDate(filial.next_revision_date) : '-'}
+            </span>
+          </div> */}
           <NextRevisionEditor
             filial={filial}
             editState={editState}
@@ -204,6 +236,22 @@ function FilialCard({
             onCancel={onCancelEdit}
             onStateChange={onEditStateChange}
           />
+        </div>
+
+        {/* Previous Revision Block */}
+        <div className={isFeatured ? 'prevDateBlock prevDateBlockFeatured' : 'prevDateBlock'}>
+          <span className={isFeatured ? 'metaLabel metaLabelFeatured' : 'metaLabel'}>
+            Прошлая ревизия
+          </span>
+          {/* <div className="dateRow">
+            <span className="dateLabel">
+              {filial.previous_revision_date ? (
+                formatDate(filial.previous_revision_date)
+              ) : (
+                <span className="emptyCell">Нет проведённых ревизий</span>
+              )}
+            </span>
+          </div> */}
         </div>
 
         {/* Shortage Block */}
