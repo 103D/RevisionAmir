@@ -1,0 +1,310 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Расписание ревизий</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📋</text></svg>" />
+    <link rel="stylesheet" href="/static/styles.css" />
+  </head>
+  <body>
+    <div id="app">
+      <!-- Sidebar -->
+      <aside class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+          <svg class="sidebar-logo" viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+            <line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/>
+            <line x1="3" y1="10" x2="21" y2="10"/>
+            <line x1="12" y1="14" x2="12" y2="18"/>
+            <line x1="10" y1="16" x2="14" y2="16"/>
+          </svg>
+          <h2>Ревизии</h2>
+        </div>
+
+        <nav class="sidebar-nav">
+          <button class="nav-item active" data-view="dashboard">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="nav-icon">
+              <rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/>
+              <rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/>
+            </svg>
+            <span>Дашборд</span>
+          </button>
+          <button class="nav-item" data-view="table">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="nav-icon">
+              <rect x="3" y="3" width="18" height="18" rx="2"/>
+              <line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/>
+            </svg>
+            <span>Таблица</span>
+          </button>
+          <button class="nav-item" data-view="audit">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="nav-icon">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+              <polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/>
+              <line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/>
+            </svg>
+            <span>Аудит</span>
+          </button>
+        </nav>
+
+        <div class="sidebar-footer">
+          <label class="theme-toggle">
+            <input type="checkbox" id="themeSwitch" />
+            <span class="toggle-track">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="toggle-icon"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="toggle-icon"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+              <span class="toggle-thumb"></span>
+            </span>
+          </label>
+          <div class="status-indicator" id="statusIndicator">
+            <span class="status-dot" id="statusDot"></span>
+            <span id="statusText">Загрузка...</span>
+          </div>
+        </div>
+      </aside>
+
+      <!-- Overlay for mobile -->
+      <div class="overlay" id="overlay"></div>
+
+      <!-- Main Content -->
+      <main class="main-content">
+
+        <!-- ====== DASHBOARD VIEW ====== -->
+        <section class="view active" id="viewDashboard">
+          <header class="view-header">
+            <h1>Дашборд</h1>
+            <p class="view-subtitle">Сводка по расписанию ревизий</p>
+          </header>
+
+          <div class="stats-grid" id="statsGrid">
+            <div class="stat-card skeleton" data-stat="total">
+              <span class="stat-label">Всего записей</span>
+              <span class="stat-value">—</span>
+            </div>
+            <div class="stat-card skeleton" data-stat="planned">
+              <span class="stat-label">Запланировано</span>
+              <span class="stat-value">—</span>
+            </div>
+            <div class="stat-card skeleton" data-stat="conducted">
+              <span class="stat-label">Проведено</span>
+              <span class="stat-value">—</span>
+            </div>
+            <div class="stat-card skeleton" data-stat="projects">
+              <span class="stat-label">Объектов</span>
+              <span class="stat-value">—</span>
+            </div>
+            <div class="stat-card skeleton" data-stat="upcoming">
+              <span class="stat-label">Предстоящие</span>
+              <span class="stat-value">—</span>
+            </div>
+            <div class="stat-card skeleton" data-stat="overdue">
+              <span class="stat-label">Просрочено</span>
+              <span class="stat-value">—</span>
+            </div>
+            <div class="stat-card skeleton" data-stat="plannedSum">
+              <span class="stat-label">Сумма план</span>
+              <span class="stat-value">—</span>
+            </div>
+            <div class="stat-card skeleton" data-stat="actualSum">
+              <span class="stat-label">Сумма факт</span>
+              <span class="stat-value">—</span>
+            </div>
+          </div>
+
+          <div class="dashboard-cards">
+            <div class="dash-card" id="statusChartCard">
+              <h3>Статусы</h3>
+              <div class="chart-container" id="statusChart"></div>
+            </div>
+            <div class="dash-card" id="projectsChartCard">
+              <h3>Топ объектов</h3>
+              <div class="chart-container" id="projectsChart"></div>
+            </div>
+          </div>
+        </section>
+
+        <!-- ====== TABLE VIEW ====== -->
+        <section class="view" id="viewTable">
+          <header class="view-header">
+            <h1>Таблица ревизий</h1>
+            <p class="view-subtitle">Просмотр расписания</p>
+          </header>
+
+          <!-- Search row -->
+          <div class="toolbar">
+            <div class="search-box">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="search-icon"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+              <input type="text" id="searchInput" placeholder="Поиск по объекту, ревизии, статусу..." autocomplete="off" />
+              <button class="search-clear" id="searchClear" hidden>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+              </button>
+            </div>
+            <div class="toolbar-actions">
+              <button class="btn btn-ghost" id="refreshBtn" title="Обновить">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+                <span>Обновить</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Sync + Export cards -->
+          <div class="action-cards">
+            <div class="action-card" id="syncCard">
+              <div class="action-card-header">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="20" rx="2"/><rect x="8" y="6" width="8" height="12" rx="1"/><circle cx="12" cy="14" r="1"/></svg>
+                <span>Google Sheets</span>
+              </div>
+              <p class="action-card-desc">Синхронизация данных с облачной таблицей</p>
+              <div class="action-card-buttons">
+                <button class="btn btn-primary" id="syncPullBtn" title="Загрузить из Google Sheets">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>
+                  Загрузить
+                </button>
+                <button class="btn btn-outline" id="syncPushBtn" title="Отправить в Google Sheets">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>
+                  Отправить
+                </button>
+              </div>
+              <span class="sync-status" id="syncStatus">Ожидание действий</span>
+            </div>
+
+            <div class="action-card" id="exportCard">
+              <div class="action-card-header">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+                <span>Экспорт</span>
+              </div>
+              <p class="action-card-desc">Выгрузка данных в формате Excel</p>
+              <div class="action-card-buttons">
+                <button class="btn btn-outline" id="exportBtn" title="Экспорт в Excel со всеми записями">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                  Скачать Excel
+                </button>
+              </div>
+            </div>
+
+            <div class="action-card" id="searchExportCard" hidden>
+              <div class="action-card-header">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                <span>Экспорт результатов поиска</span>
+              </div>
+              <p class="action-card-desc">Выгрузка отфильтрованных данных</p>
+              <div class="action-card-buttons">
+                <button class="btn btn-outline" id="exportSearchBtn" title="Экспорт найденных записей">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                  Скачать найденное
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Table -->
+          <div class="table-container">
+            <div class="table-wrapper">
+              <table>
+                <thead>
+                  <tr>
+                    <th data-sort="year">Год <span class="sort-arrow"></span></th>
+                    <th data-sort="month">Месяц <span class="sort-arrow"></span></th>
+                    <th data-sort="project">Объект <span class="sort-arrow"></span></th>
+                    <th data-sort="revision_info">Ревизия <span class="sort-arrow"></span></th>
+                    <th data-sort="event_date">Дата <span class="sort-arrow"></span></th>
+                    <th data-sort="weekday">День <span class="sort-arrow"></span></th>
+                    <th data-sort="inspection_type">Тип <span class="sort-arrow"></span></th>
+                    <th data-sort="status">Статус <span class="sort-arrow"></span></th>
+                    <th data-sort="amount_planned">План <span class="sort-arrow"></span></th>
+                    <th data-sort="amount_actual">Факт <span class="sort-arrow"></span></th>
+                  </tr>
+                </thead>
+                <tbody id="itemsBody">
+                  <tr class="loading-row">
+                    <td colspan="10"><div class="loading-spinner"></div></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Pagination -->
+          <div class="pagination" id="pagination">
+            <button class="btn btn-ghost" id="pagePrev" disabled>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+              Назад
+            </button>
+            <span class="page-info" id="pageInfo">—</span>
+            <button class="btn btn-ghost" id="pageNext">
+              Вперёд
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+            </button>
+            <select class="page-size-select" id="pageSizeSelect">
+              <option value="10">10</option>
+              <option value="25" selected>25</option>
+              <option value="50">50</option>
+              <option value="100">100</option>
+            </select>
+          </div>
+        </section>
+
+        <!-- ====== AUDIT VIEW ====== -->
+        <section class="view" id="viewAudit">
+          <header class="view-header">
+            <h1>Журнал аудита</h1>
+            <p class="view-subtitle">История изменений записей</p>
+          </header>
+
+          <div class="toolbar">
+            <div class="filter-group">
+              <select id="auditFilter" class="filter-select">
+                <option value="">Все действия</option>
+                <option value="CREATE">Создание</option>
+                <option value="UPDATE">Изменение</option>
+                <option value="DELETE">Удаление</option>
+                <option value="REPLACE">Замена</option>
+              </select>
+            </div>
+            <button class="btn btn-ghost" id="refreshAuditBtn">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+            </button>
+          </div>
+
+          <div class="table-container">
+            <div class="table-wrapper">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Время</th>
+                    <th>Действие</th>
+                    <th>ID записи</th>
+                    <th>Детали</th>
+                  </tr>
+                </thead>
+                <tbody id="auditBody">
+                  <tr class="loading-row">
+                    <td colspan="4"><div class="loading-spinner"></div></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <div class="pagination" id="auditPagination">
+            <button class="btn btn-ghost" id="auditPagePrev" disabled>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+              Назад
+            </button>
+            <span class="page-info" id="auditPageInfo">—</span>
+            <button class="btn btn-ghost" id="auditPageNext">
+              Вперёд
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+            </button>
+          </div>
+        </section>
+
+      </main>
+    </div>
+
+    <!-- ====== TOAST ====== -->
+    <div class="toast-container" id="toastContainer"></div>
+
+    <script type="module" src="/static/app.js"></script>
+  </body>
+</html>

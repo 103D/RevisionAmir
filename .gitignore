@@ -1,0 +1,37 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+
+# venv
+.venv/
+venv/
+
+# IDE
+.vscode/
+.vscode-oss/
+.idea/
+
+# Continue AI (ВАЖНО)
+.continue/
+
+# secrets
+.env
+*.json
+
+# caches
+.cache/
+.mypy_cache/
+.ruff_cache/
+
+# OS
+.DS_Store
+
+#
+ECC/
+.agents/
+.vscode/
+.github/
+
+.vscode/mcp.json
+~/.mcp.json
